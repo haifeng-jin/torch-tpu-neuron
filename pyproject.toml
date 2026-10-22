@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "torch-tpu-neuron"
+version = "0.1.0"
+description = "Companion library enabling torch_tpu to run on AWS Trainium / Neuron with zero torch_tpu code modifications"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+dependencies = [
+    "torch",
+    "torch_tpu",
+]
+
+[project.optional-dependencies]
+trainium = [
+    "torch-neuronx",
+    "neuronx-cc",
+]
+dev = [
+    "pytest",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["torch_tpu_neuron*"]
