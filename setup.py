@@ -4,6 +4,21 @@ import subprocess
 from setuptools import setup, find_packages, Extension
 from setuptools.command.build_ext import build_ext
 
+try:
+  from wheel.bdist_wheel import bdist_wheel as _bdist_wheel
+
+  class BdistWheel(_bdist_wheel):
+    def get_tag(self):
+      # Emits universal py3-none-manylinux tag because libtpu_neuron_shim.so
+      # has zero Python C-API dependencies and zero PyTorch ABI dependencies.
+      _, _, plat = super().get_tag()
+      if plat.startswith("linux_"):
+        arch = plat.split("_", 1)[1]
+        plat = f"manylinux2014_{arch}.manylinux_2_17_{arch}"
+      return "py3", "none", plat
+except ImportError:
+  BdistWheel = None
+
 
 class BuildShimExt(build_ext):
   def get_ext_filename(self, ext_name):
@@ -47,6 +62,9 @@ setup(
             include_dirs=["csrc", "include"],
         )
     ],
-    cmdclass={"build_ext": BuildShimExt},
+    cmdclass={
+        "build_ext": BuildShimExt,
+        **({"bdist_wheel": BdistWheel} if BdistWheel else {}),
+    },
     package_data={"torch_tpu_neuron": ["*.so"]},
 )

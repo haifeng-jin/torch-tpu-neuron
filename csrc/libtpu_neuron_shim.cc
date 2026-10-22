@@ -5,6 +5,15 @@
 #include <cstring>
 #include <dlfcn.h>
 #include <mutex>
+
+// Lower glibc symbol version requirement for dlopen/dlsym/dlerror to GLIBC_2.2.5
+// on x86_64 Linux to ensure manylinux2014 / manylinux_2_17 compatibility across
+// all AWS Deep Learning AMIs (including Amazon Linux 2).
+#if defined(__linux__) && defined(__x86_64__)
+__asm__(".symver dlopen,dlopen@GLIBC_2.2.5");
+__asm__(".symver dlsym,dlsym@GLIBC_2.2.5");
+__asm__(".symver dlerror,dlerror@GLIBC_2.2.5");
+#endif
 #include <string>
 #include <string_view>
 #include <vector>
