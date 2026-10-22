@@ -114,8 +114,11 @@ void EnsureInitialized() {
   const char* env_lib = std::getenv("TORCH_TPU_NEURON_BACKEND_LIB");
   const char* candidates[] = {
       env_lib,
+      "libneuronpjrt.so",
       "libneuronxla.so",
+      "/opt/aws/neuron/lib/libneuronpjrt.so",
       "/opt/aws/neuron/lib/libneuronxla.so",
+      "/usr/local/lib/libneuronpjrt.so",
       "/usr/local/lib/libneuronxla.so",
   };
 

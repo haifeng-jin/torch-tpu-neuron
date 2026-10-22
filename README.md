@@ -4,15 +4,22 @@
 
 ---
 
+## Prerequisites
+
+* Physical AWS Trainium instance (`trn1` / `trn2`).
+* Neuron driver and runtime (`aws-neuronx-runtime-lib >= 2.35`).
+
+---
+
 ## Installation & Quickstart
 
 ```bash
 # Clone the repository
-git clone https://github.com/haifeng-jin/torch-tpu-neuron.git
+git clone git@github.com:haifeng-jin/torch-tpu-neuron.git
 cd torch-tpu-neuron
 
-# Build and install in editable mode
-pip install -e .
+# Install in editable mode with the AWS Neuron package index
+pip install -e . --extra-index-url=https://pip.repos.neuron.amazonaws.com
 ```
 
 ### Quickstart
@@ -25,8 +32,8 @@ import torch
 
 device = torch.accelerator.current_accelerator()
 
-a = torch.tensor([1.0, 2.0, 3.0], device=device)
-b = torch.tensor([4.0, 5.0, 6.0], device=device)
+a = torch.tensor([1.0, 2.0, 3.0], dtype=torch.float32, device=device)
+b = torch.tensor([4.0, 5.0, 6.0], dtype=torch.float32, device=device)
 print(a + b)
 ```
 
@@ -36,13 +43,13 @@ See [`example.py`](example.py) for a full example of accelerator inspection and 
 
 ## Environment Variables (Optional)
 
-**No environment variables are required.** `import torch_tpu_neuron` automatically discovers `libneuronxla.so` and configures the runtime without any manual setup.
+**No environment variables are required.** `import torch_tpu_neuron` automatically discovers `libneuronpjrt.so` and configures the runtime without manual setup.
 
 For custom library paths, the following optional override is supported:
 
 | Variable | Description |
 |---|---|
-| `TORCH_TPU_NEURON_BACKEND_LIB` | Override path to Neuron PJRT runtime `.so` (defaults to auto-detecting `libneuronxla.so`) |
+| `TORCH_TPU_NEURON_BACKEND_LIB` | Override path to Neuron PJRT runtime `.so` (defaults to auto-detecting `libneuronpjrt.so`) |
 
 ---
 

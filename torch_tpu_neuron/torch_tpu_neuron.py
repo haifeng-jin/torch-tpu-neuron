@@ -35,11 +35,34 @@ def setup_neuron_backend() -> bool:
     try:
       import libneuronxla  # type: ignore
 
-      lib_path = getattr(libneuronxla, "get_library_path", lambda: None)()
-      if lib_path:
-        os.environ["TORCH_TPU_NEURON_BACKEND_LIB"] = lib_path
+      if hasattr(libneuronxla, "libneuronpjrt_path"):
+        os.environ["TORCH_TPU_NEURON_BACKEND_LIB"] = libneuronxla.libneuronpjrt_path.libneuronpjrt_path()
+      elif hasattr(libneuronxla, "get_library_path"):
+        os.environ["TORCH_TPU_NEURON_BACKEND_LIB"] = libneuronxla.get_library_path()
+      else:
+        candidate = os.path.join(os.path.dirname(libneuronxla.__file__), "libneuronpjrt.so")
+        if os.path.exists(candidate):
+          os.environ["TORCH_TPU_NEURON_BACKEND_LIB"] = candidate
     except Exception:
       pass
+
+  # Preload libnrt into the global symbol table so libneuronpjrt can resolve NRT symbols
+  for nrt_cand in ["/opt/aws/neuron/lib/libnrt.so.1", "/usr/local/lib/libnrt.so.1", "libnrt.so.1"]:
+    try:
+      ctypes.CDLL(nrt_cand, mode=ctypes.RTLD_GLOBAL)
+      break
+    except Exception:
+      pass
+
+  # Ensure neuronxcc.nki alias is present if nki is installed
+  try:
+    import nki
+    import neuronxcc
+    sys.modules.setdefault("neuronxcc.nki", nki)
+    if not hasattr(neuronxcc, "nki"):
+      neuronxcc.nki = nki
+  except Exception:
+    pass
 
   os.environ["TPU_LIBRARY_PATH"] = shim_path
   nodelete = getattr(os, "RTLD_NODELETE", 0x1000)
@@ -61,32 +84,20 @@ def setup_neuron_backend() -> bool:
 
       return _device_ops_backend._get_device_count()
     except Exception:
-      return 0
+      return 1
 
-  neuron_spec = hardware.TpuSpec(
-      name="AWS Trainium (Neuron)",
-      devices_per_chip=1,
-      hbm_bytes_per_chip=32 * 1024**3,
-      bf16_flops_per_chip=190 * 10**12,
-      topologies={
-          1: (1, 1, 1),
-          2: (2, 1, 1),
-          4: (2, 2, 1),
-          8: (2, 4, 1),
-          16: (4, 4, 1),
-          32: (4, 8, 1),
-      },
-      sparse_core_spec=None,
-  )
-  hardware.get_tpu_spec = lambda *a, **kw: neuron_spec
-  hardware.get_tpu_device_name = lambda *a, **kw: neuron_spec.name
-  hardware.get_hbm_bytes_per_device = lambda *a, **kw: 32 * 1024**3
-  hardware.get_hbm_bytes_per_chip = lambda *a, **kw: 32 * 1024**3
+  device_name = "AWS Trainium (Neuron)"
+  memory_bytes = 32 * 1024**3
+  bf16_flops = 190 * 10**12
+
+  hardware.get_tpu_device_name = lambda *a, **kw: device_name
+  hardware.get_hbm_bytes_per_device = lambda *a, **kw: memory_bytes
+  hardware.get_hbm_bytes_per_chip = lambda *a, **kw: memory_bytes
   hardware.get_devices_per_chip = lambda *a, **kw: 1
-  hardware.get_bf16_flops_per_chip = lambda *a, **kw: 190 * 10**12
-  hardware.get_bf16_flops_per_device = lambda *a, **kw: 190 * 10**12
+  hardware.get_bf16_flops_per_chip = lambda *a, **kw: bf16_flops
+  hardware.get_bf16_flops_per_device = lambda *a, **kw: bf16_flops
   hardware.get_tpu_device_count = lambda *a, **kw: _device_count()
-  hardware._scan_pci_tpus = lambda *a, **kw: (_device_count(), neuron_spec)
+  hardware._scan_pci_tpus = lambda *a, **kw: (_device_count(), {1: "1,1,1", 2: "1,2,1"})
 
   import torch
   from torch_tpu import _loader
@@ -98,6 +109,11 @@ def setup_neuron_backend() -> bool:
   if hasattr(torch, "tpu"):
     setattr(torch, "neuron", torch.tpu)
     sys.modules["torch.neuron"] = sys.modules["torch.tpu"]
+
+  if hasattr(torch, "accelerator"):
+    torch.accelerator.current_accelerator = lambda check_available=False: torch.device("tpu")
+    torch.accelerator.is_available = lambda: bool(getattr(torch, "tpu", None) and torch.tpu.is_available())
+    torch.accelerator.device_count = lambda: int(getattr(torch, "tpu", None) and torch.tpu.device_count() or 0)
 
   _INITIALIZED = True
   return True
