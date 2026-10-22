@@ -2,15 +2,11 @@
 
 from torch_tpu_neuron.torch_tpu_neuron import (
     setup_neuron_backend,
-    get_shim_stats,
-    device,
     is_available,
 )
 
 __all__ = [
     "setup_neuron_backend",
-    "get_shim_stats",
-    "device",
     "is_available",
 ]
 

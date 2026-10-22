@@ -1,6 +1,5 @@
 """Integration and unit test suite for torch_tpu_neuron using pytest and torch.accelerator."""
 
-import os
 import pytest
 import torch
 import torch.nn as nn
@@ -11,13 +10,10 @@ import torch_tpu_neuron
 @pytest.fixture(scope="session")
 def neuron_backend():
   """Initializes the Neuron backend once for the test session."""
-  info = torch_tpu_neuron.setup_neuron_backend()
-  stats = torch_tpu_neuron.get_shim_stats()
-  if stats["backend_mode"] == "uninitialized":
-    pytest.skip(
-        "AWS Trainium / Neuron runtime (libneuronxla.so) is not present on this host."
-    )
-  return {"info": info}
+  loaded = torch_tpu_neuron.setup_neuron_backend()
+  if not loaded:
+    pytest.skip("AWS Trainium / Neuron runtime (libneuronxla.so) is not present on this host.")
+  return {"loaded": loaded}
 
 
 def test_device_registration_and_metadata(neuron_backend):
@@ -120,7 +116,3 @@ def test_torch_compile(neuron_backend):
   actual_dev = compiled_fn(x_dev, y_dev)
   torch.accelerator.synchronize()
   assert torch.allclose(actual_dev.cpu(), expected_cpu, rtol=1e-4, atol=1e-4)
-
-  stats = torch_tpu_neuron.get_shim_stats()
-  assert stats["compile_count"] >= 1
-  assert stats["execute_count"] >= 1
