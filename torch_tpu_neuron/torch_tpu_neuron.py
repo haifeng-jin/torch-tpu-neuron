@@ -25,7 +25,9 @@ def setup_neuron_backend() -> bool:
   if _INITIALIZED:
     return _is_backend_loaded()
 
-  shim_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "libtpu_neuron_shim.so")
+  shim_path = os.path.realpath(
+      os.path.join(os.path.dirname(os.path.abspath(__file__)), "libtpu_neuron_shim.so")
+  )
   if not os.path.exists(shim_path):
     raise FileNotFoundError(f"Missing {shim_path}. Build extension with `pip install -e .`")
 
@@ -42,6 +44,10 @@ def setup_neuron_backend() -> bool:
   os.environ["TPU_LIBRARY_PATH"] = shim_path
   nodelete = getattr(os, "RTLD_NODELETE", 0x1000)
   _SHIM_SO = ctypes.CDLL(shim_path, mode=os.RTLD_NOW | os.RTLD_LOCAL | nodelete)
+  _SHIM_SO.IsNeuronBackendLoaded.restype = ctypes.c_int
+
+  if not _is_backend_loaded():
+    return False
 
   from torch_tpu._internal.utils import annotations, hardware
 
@@ -87,13 +93,14 @@ def setup_neuron_backend() -> bool:
 
   _loader._init_device("tpu")
   _loader._LOADED = True
+  _device_count()
 
   if hasattr(torch, "tpu"):
     setattr(torch, "neuron", torch.tpu)
     sys.modules["torch.neuron"] = sys.modules["torch.tpu"]
 
   _INITIALIZED = True
-  return _is_backend_loaded()
+  return True
 
 
 def is_available() -> bool:

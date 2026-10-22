@@ -1,5 +1,5 @@
+import torch_tpu_neuron  # Must be imported before torch
 import torch
-import torch_tpu_neuron
 
 # 1. Inspect accelerator status
 print(f"Accelerator available: {torch.accelerator.is_available()}")

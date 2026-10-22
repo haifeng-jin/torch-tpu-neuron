@@ -88,7 +88,9 @@ void* WrappedClientCreate(PJRT_Client_Create_Args* args) {
   if (args->create_options != nullptr) {
     for (size_t i = 0; i < args->num_options; ++i) {
       const auto& opt = args->create_options[i];
-      if (opt.name != nullptr && std::strcmp(opt.name, "premapped_buffer_size") == 0) {
+      if (opt.name != nullptr &&
+          ((opt.name_size == 21 && std::strncmp(opt.name, "premapped_buffer_size", 21) == 0) ||
+           std::strcmp(opt.name, "premapped_buffer_size") == 0)) {
         continue;
       }
       filtered.push_back(opt);

@@ -17,9 +17,11 @@ pip install -e .
 
 ### Quickstart
 
+> **Note**: `torch_tpu_neuron` must be imported **before** `torch` so that PyTorch's backend loader registers the Neuron PJRT shim runtime.
+
 ```python
+import torch_tpu_neuron  # Must be imported before torch
 import torch
-import torch_tpu_neuron
 
 device = torch.accelerator.current_accelerator()
 
