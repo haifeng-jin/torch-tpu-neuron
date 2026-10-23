@@ -11,7 +11,7 @@ license = "MIT"
 requires-python = ">=3.10"
 dependencies = [
     "torch",
-    "torch_tpu",
+    "torch_tpu==0.2.0",
 ]
 
 [project.optional-dependencies]
