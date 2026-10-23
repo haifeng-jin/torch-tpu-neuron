@@ -53,14 +53,19 @@ python examples/basic_ops.py
 
 ### 2. Hugging Face Transformer Inference (`examples/hf_inference.py`)
 
-Runs LLM prompting and generation with Hugging Face `transformers` on a single Trainium chip. `torch_tpu_neuron` automatically configures `torch.backends.cuda` to disable TPU-specific custom-call FlashAttention kernels, allowing PyTorch's native Scaled Dot-Product Attention (SDPA) to lower to pure StableHLO:
+Runs LLM prompting and generation with Hugging Face `transformers` on a single Trainium chip. `torch_tpu_neuron` automatically configures `torch.backends.cuda` to disable TPU-specific custom-call FlashAttention kernels, allowing PyTorch's native Scaled Dot-Product Attention (SDPA) to lower to pure StableHLO.
 
+**Dependencies:**
 ```bash
-# Recommended default: Qwen/Qwen2.5-0.5B-Instruct (public, zero authentication required)
-python examples/hf_inference.py --model Qwen/Qwen2.5-0.5B-Instruct
+pip install transformers accelerate
+# Or install example dependencies via:
+# pip install -e ".[examples]"
+```
 
-# Or with Google Gemma (requires HF token login):
-python examples/hf_inference.py --model google/gemma-3-1b-it
+**Run Inference:**
+```bash
+# Public ungated model (no Hugging Face login or token required)
+python examples/hf_inference.py --model Qwen/Qwen2.5-0.5B-Instruct
 ```
 
 ---

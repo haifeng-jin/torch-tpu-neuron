@@ -1,8 +1,12 @@
 """Hugging Face Transformer LLM Inference on a single AWS Trainium chip.
 
+Prerequisites:
+    pip install transformers accelerate
+    # Or install example dependencies from repository:
+    # pip install -e ".[examples]"
+
 Usage:
     python examples/hf_inference.py --model Qwen/Qwen2.5-0.5B-Instruct
-    python examples/hf_inference.py --model google/gemma-3-1b-it
 """
 
 # IMPORTANT: torch_tpu_neuron MUST be imported before torch or transformers.
@@ -25,8 +29,8 @@ def parse_args():
       type=str,
       default="Qwen/Qwen2.5-0.5B-Instruct",
       help=(
-          "Hugging Face model ID or path. Recommended small models for a single Trainium chip: "
-          "'Qwen/Qwen2.5-0.5B-Instruct' (public, ungated) or 'google/gemma-3-1b-it' (requires HF token)."
+          "Hugging Face model ID or path. Recommended small ungated public models: "
+          "'Qwen/Qwen2.5-0.5B-Instruct' or 'Qwen/Qwen3-0.6B' (no HF account/token required)."
       ),
   )
   parser.add_argument(

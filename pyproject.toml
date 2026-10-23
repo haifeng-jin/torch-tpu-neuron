@@ -19,6 +19,10 @@ trainium = [
     "torch-neuronx",
     "neuronx-cc",
 ]
+examples = [
+    "transformers>=4.40.0",
+    "accelerate>=0.26.0",
+]
 dev = [
     "pytest",
 ]
