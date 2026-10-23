@@ -19,11 +19,35 @@ def _is_backend_loaded() -> bool:
   return bool(_SHIM_SO and hasattr(_SHIM_SO, "IsNeuronBackendLoaded") and _SHIM_SO.IsNeuronBackendLoaded())
 
 
+def _disable_tpu_custom_sdp_kernels() -> None:
+  """Disables TPU precompiled FlashAttention kernels via torch.backends.cuda.
+
+  Forces torch_tpu to lower F.scaled_dot_product_attention to pure StableHLO
+  (ScaledDotProductFusedAttentionShlo) instead of @tpu_custom_call Mosaic kernels.
+  """
+  try:
+    import torch
+
+    if hasattr(torch, "backends") and hasattr(torch.backends, "cuda"):
+      if hasattr(torch.backends.cuda, "enable_flash_sdp"):
+        torch.backends.cuda.enable_flash_sdp(False)
+      if hasattr(torch.backends.cuda, "enable_mem_efficient_sdp"):
+        torch.backends.cuda.enable_mem_efficient_sdp(False)
+      if hasattr(torch.backends.cuda, "enable_cudnn_sdp"):
+        torch.backends.cuda.enable_cudnn_sdp(False)
+      if hasattr(torch.backends.cuda, "enable_math_sdp"):
+        torch.backends.cuda.enable_math_sdp(True)
+  except Exception:
+    pass
+
+
 def setup_neuron_backend() -> bool:
   """Initializes the Neuron PJRT backend and registers the device in PyTorch."""
   global _INITIALIZED, _SHIM_SO
   if _INITIALIZED:
     return _is_backend_loaded()
+
+  _disable_tpu_custom_sdp_kernels()
 
   shim_path = os.path.realpath(
       os.path.join(os.path.dirname(os.path.abspath(__file__)), "libtpu_neuron_shim.so")
@@ -58,6 +82,7 @@ def setup_neuron_backend() -> bool:
   try:
     import nki
     import neuronxcc
+
     sys.modules.setdefault("neuronxcc.nki", nki)
     if not hasattr(neuronxcc, "nki"):
       neuronxcc.nki = nki
@@ -128,3 +153,6 @@ def is_available() -> bool:
   if hasattr(torch, "accelerator"):
     return bool(torch.accelerator.is_available())
   return bool(getattr(torch, "tpu", None) and torch.tpu.is_available())
+
+
+_disable_tpu_custom_sdp_kernels()

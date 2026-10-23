@@ -127,3 +127,35 @@ def test_torch_compile(neuron_backend):
   actual_dev = compiled_fn(x_dev, y_dev)
   torch.accelerator.synchronize()
   assert torch.allclose(actual_dev.cpu(), expected_cpu, rtol=1e-4, atol=1e-4)
+
+
+def test_sdp_kernel_disabling():
+  """Verifies that precompiled TPU custom SDPA kernels are disabled via torch.backends.cuda."""
+  if hasattr(torch, "backends") and hasattr(torch.backends, "cuda"):
+    if hasattr(torch.backends.cuda, "flash_sdp_enabled"):
+      assert not torch.backends.cuda.flash_sdp_enabled()
+    if hasattr(torch.backends.cuda, "mem_efficient_sdp_enabled"):
+      assert not torch.backends.cuda.mem_efficient_sdp_enabled()
+    if hasattr(torch.backends.cuda, "math_sdp_enabled"):
+      assert torch.backends.cuda.math_sdp_enabled()
+
+
+def test_sdpa_attention_numerical_parity(neuron_backend):
+  """Verifies scaled_dot_product_attention on Neuron device with seq_len >= 128 (pure StableHLO path)."""
+  dev = torch.accelerator.current_accelerator()
+
+  torch.manual_seed(99)
+  batch, heads, seq_len, head_dim = 2, 4, 128, 64
+  q_cpu = torch.randn(batch, heads, seq_len, head_dim, dtype=torch.float32)
+  k_cpu = torch.randn(batch, heads, seq_len, head_dim, dtype=torch.float32)
+  v_cpu = torch.randn(batch, heads, seq_len, head_dim, dtype=torch.float32)
+
+  out_cpu = F.scaled_dot_product_attention(q_cpu, k_cpu, v_cpu, is_causal=True)
+
+  q_dev = q_cpu.to(dev)
+  k_dev = k_cpu.to(dev)
+  v_dev = v_cpu.to(dev)
+  out_dev = F.scaled_dot_product_attention(q_dev, k_dev, v_dev, is_causal=True)
+  torch.accelerator.synchronize()
+
+  assert torch.allclose(out_dev.cpu(), out_cpu, rtol=1e-3, atol=1e-3)

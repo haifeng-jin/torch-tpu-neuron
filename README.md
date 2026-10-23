@@ -15,7 +15,7 @@
 
 ```bash
 # Clone the repository
-git clone git@github.com:haifeng-jin/torch-tpu-neuron.git
+git clone https://github.com/haifeng-jin/torch-tpu-neuron.git
 cd torch-tpu-neuron
 
 # Install in editable mode with the AWS Neuron package index
@@ -24,7 +24,7 @@ pip install -e . --extra-index-url=https://pip.repos.neuron.amazonaws.com
 
 ### Quickstart
 
-> **Note**: `torch_tpu_neuron` must be imported **before** `torch` so that PyTorch's backend loader registers the Neuron PJRT shim runtime.
+> **Important**: `torch_tpu_neuron` must be imported **first**, before `torch` or any torch-dependent library, so that PyTorch registers the Neuron PJRT shim runtime.
 
 ```python
 import torch_tpu_neuron  # Must be imported before torch
@@ -37,13 +37,57 @@ b = torch.tensor([4.0, 5.0, 6.0], dtype=torch.float32, device=device)
 print(a + b)
 ```
 
-See [`example.py`](example.py) for a full example of accelerator inspection and `@torch.compile` execution.
+---
+
+## Examples
+
+All examples are organized under the [`examples/`](examples/) directory:
+
+### 1. Device Inspection & Regression MLP Training (`examples/basic_ops.py`)
+
+Inspects the accelerator, generates synthetic non-linear regression data on the Neuron device, and trains a 2-layer MLP using `@torch.compile(backend="tpu")`, verifying that loss decreases and converges:
+
+```bash
+python examples/basic_ops.py
+```
+
+### 2. Hugging Face Transformer Inference (`examples/hf_inference.py`)
+
+Runs LLM prompting and generation with Hugging Face `transformers` on a single Trainium chip. `torch_tpu_neuron` automatically configures `torch.backends.cuda` to disable TPU-specific custom-call FlashAttention kernels, allowing PyTorch's native Scaled Dot-Product Attention (SDPA) to lower to pure StableHLO:
+
+```bash
+# Recommended default: Qwen/Qwen2.5-0.5B-Instruct (public, zero authentication required)
+python examples/hf_inference.py --model Qwen/Qwen2.5-0.5B-Instruct
+
+# Or with Google Gemma (requires HF token login):
+python examples/hf_inference.py --model google/gemma-3-1b-it
+```
+
+---
+
+## Directory Structure
+
+```text
+torch-tpu-neuron/
+├── csrc/
+│   └── libtpu_neuron_shim.cc       # PJRT C API shim mapping libtpu to libneuronpjrt.so
+├── torch_tpu_neuron/
+│   ├── __init__.py
+│   └── torch_tpu_neuron.py         # Runtime setup & torch.backends.cuda SDP configuration
+├── examples/
+│   ├── basic_ops.py                # Device inspection, torch.compile & MLP regression training
+│   └── hf_inference.py             # Hugging Face Transformer LLM inference
+├── tests/
+│   └── test_neuron_device.py       # Integration test suite
+├── pyproject.toml
+└── README.md
+```
 
 ---
 
 ## Environment Variables (Optional)
 
-**No environment variables are required.** `import torch_tpu_neuron` automatically discovers `libneuronpjrt.so` and configures the runtime without manual setup.
+**No environment variables are required.** `import torch_tpu_neuron` automatically discovers `libneuronpjrt.so` and configures the runtime.
 
 For custom library paths, the following optional override is supported:
 
