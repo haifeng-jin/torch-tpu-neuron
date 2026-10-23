@@ -39,11 +39,7 @@ print(a + b)
 
 ---
 
-## Examples
-
-All examples are organized under the [`examples/`](examples/) directory:
-
-### Device Inspection & Regression MLP Training (`examples/basic_ops.py`)
+## Example
 
 Inspects the accelerator, generates synthetic non-linear regression data on the Neuron device, and trains a 2-layer MLP using `torch.compile(backend="tpu")`, verifying that loss decreases and converges:
 
@@ -57,25 +53,6 @@ python examples/basic_ops.py
 
 1. **No Float64 (`f64`) Support**: Trainium hardware does not support 64-bit float precision. Mixing Python scalar floats with tensors (e.g., `0.3 * x` or `x + 1e-6`) creates `f64` constants in the graph that the Neuron compiler will reject (`[NCC_ESPP004]`). Always use explicit `float32` or `bfloat16` tensors for constants.
 2. **`torch.compile` Scope**: Compile the model directly (`model = torch.compile(raw_model, backend="tpu")`) and run the optimizer in eager mode. Wrapping the whole training step with optimizers like Adam captures CPU step counter tensors into the TPU graph, triggering device placement errors.
-
----
-
-## Directory Structure
-
-```text
-torch-tpu-neuron/
-├── csrc/
-│   └── libtpu_neuron_shim.cc       # PJRT C API shim mapping libtpu to libneuronpjrt.so
-├── torch_tpu_neuron/
-│   ├── __init__.py
-│   └── torch_tpu_neuron.py         # Runtime setup & torch.backends.cuda SDP configuration
-├── examples/
-│   └── basic_ops.py                # Device inspection, torch.compile & MLP regression training
-├── tests/
-│   └── test_neuron_device.py       # Integration test suite
-├── pyproject.toml
-└── README.md
-```
 
 ---
 
