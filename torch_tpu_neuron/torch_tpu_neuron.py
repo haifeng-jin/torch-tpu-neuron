@@ -47,13 +47,13 @@ def setup_neuron_backend() -> bool:
   if _INITIALIZED:
     return _is_backend_loaded()
 
-  _disable_tpu_custom_sdp_kernels()
-
   shim_path = os.path.realpath(
       os.path.join(os.path.dirname(os.path.abspath(__file__)), "libtpu_neuron_shim.so")
   )
   if not os.path.exists(shim_path):
     raise FileNotFoundError(f"Missing {shim_path}. Build extension with `pip install -e .`")
+
+  os.environ["TPU_LIBRARY_PATH"] = shim_path
 
   if not os.environ.get("TORCH_TPU_NEURON_BACKEND_LIB"):
     try:
@@ -130,6 +130,7 @@ def setup_neuron_backend() -> bool:
   _loader._init_device("tpu")
   _loader._LOADED = True
   _device_count()
+  _disable_tpu_custom_sdp_kernels()
 
   if hasattr(torch, "tpu"):
     setattr(torch, "neuron", torch.tpu)
@@ -153,6 +154,3 @@ def is_available() -> bool:
   if hasattr(torch, "accelerator"):
     return bool(torch.accelerator.is_available())
   return bool(getattr(torch, "tpu", None) and torch.tpu.is_available())
-
-
-_disable_tpu_custom_sdp_kernels()

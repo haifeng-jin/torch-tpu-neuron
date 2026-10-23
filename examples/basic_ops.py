@@ -23,38 +23,32 @@ device = torch.accelerator.current_accelerator()
 torch.manual_seed(42)
 
 # Synthetic data: y = x @ w + 0.3 * sin(x_0)
-x = torch.randn(256, 16, device=device)
-w_true = torch.randn(16, 1, device=device)
-y = torch.matmul(x, w_true) + 0.3 * torch.sin(x[:, :1])
+x = torch.randn(256, 16, dtype=torch.float32, device=device)
+w_true = torch.randn(16, 1, dtype=torch.float32, device=device)
+bias = torch.tensor(0.3, dtype=torch.float32, device=device)
+y = torch.matmul(x, w_true) + bias * torch.sin(x[:, :1])
 
 # 3. Define a concise 2-layer regression MLP
-model = nn.Sequential(
+raw_model = nn.Sequential(
     nn.Linear(16, 32),
     nn.ReLU(),
     nn.Linear(32, 1),
 ).to(device)
 
+model = torch.compile(raw_model, backend="tpu")
 criterion = nn.MSELoss()
-optimizer = torch.optim.Adam(model.parameters(), lr=0.02)
-
-
-# 4. Train with torch.compile using the Neuron accelerator backend
-@torch.compile(backend="tpu")
-def train_step(data: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
-  optimizer.zero_grad()
-  pred = model(data)
-  loss = criterion(pred, target)
-  loss.backward()
-  optimizer.step()
-  return loss
-
+optimizer = torch.optim.SGD(raw_model.parameters(), lr=0.05, momentum=0.9)
 
 print("\nTraining MLP regression model on synthetic data...")
 initial_loss = 0.0
 final_loss = 0.0
 
 for step in range(1, 51):
-  loss = train_step(x, y)
+  optimizer.zero_grad()
+  pred = model(x)
+  loss = criterion(pred, y)
+  loss.backward()
+  optimizer.step()
   loss_val = float(loss.item())
   if step == 1:
     initial_loss = loss_val

@@ -1,6 +1,6 @@
 # torch-tpu-neuron
 
-**Companion library enabling Google `torch_tpu` to seamlessly target Amazon Trainium / Neuron (`trn1`/`trn2`) with ZERO modifications to `torch_tpu` code.**
+**A prototype library enabling Google `torch_tpu` to target Amazon Trainium / Neuron (`trn1`/`trn2`) without modifying `torch_tpu` code.**
 
 ---
 
@@ -43,30 +43,20 @@ print(a + b)
 
 All examples are organized under the [`examples/`](examples/) directory:
 
-### 1. Device Inspection & Regression MLP Training (`examples/basic_ops.py`)
+### Device Inspection & Regression MLP Training (`examples/basic_ops.py`)
 
-Inspects the accelerator, generates synthetic non-linear regression data on the Neuron device, and trains a 2-layer MLP using `@torch.compile(backend="tpu")`, verifying that loss decreases and converges:
+Inspects the accelerator, generates synthetic non-linear regression data on the Neuron device, and trains a 2-layer MLP using `torch.compile(backend="tpu")`, verifying that loss decreases and converges:
 
 ```bash
 python examples/basic_ops.py
 ```
 
-### 2. Hugging Face Transformer Inference (`examples/hf_inference.py`)
+---
 
-Runs LLM prompting and generation with Hugging Face `transformers` on a single Trainium chip. `torch_tpu_neuron` automatically configures `torch.backends.cuda` to disable TPU-specific custom-call FlashAttention kernels, allowing PyTorch's native Scaled Dot-Product Attention (SDPA) to lower to pure StableHLO.
+## Known Limitations
 
-**Dependencies:**
-```bash
-pip install transformers accelerate
-# Or install example dependencies via:
-# pip install -e ".[examples]"
-```
-
-**Run Inference:**
-```bash
-# Public ungated model (no Hugging Face login or token required)
-python examples/hf_inference.py --model Qwen/Qwen2.5-0.5B-Instruct
-```
+1. **No Float64 (`f64`) Support**: Trainium hardware does not support 64-bit float precision. Mixing Python scalar floats with tensors (e.g., `0.3 * x` or `x + 1e-6`) creates `f64` constants in the graph that the Neuron compiler will reject (`[NCC_ESPP004]`). Always use explicit `float32` or `bfloat16` tensors for constants.
+2. **`torch.compile` Scope**: Compile the model directly (`model = torch.compile(raw_model, backend="tpu")`) and run the optimizer in eager mode. Wrapping the whole training step with optimizers like Adam captures CPU step counter tensors into the TPU graph, triggering device placement errors.
 
 ---
 
@@ -80,8 +70,7 @@ torch-tpu-neuron/
 │   ├── __init__.py
 │   └── torch_tpu_neuron.py         # Runtime setup & torch.backends.cuda SDP configuration
 ├── examples/
-│   ├── basic_ops.py                # Device inspection, torch.compile & MLP regression training
-│   └── hf_inference.py             # Hugging Face Transformer LLM inference
+│   └── basic_ops.py                # Device inspection, torch.compile & MLP regression training
 ├── tests/
 │   └── test_neuron_device.py       # Integration test suite
 ├── pyproject.toml
