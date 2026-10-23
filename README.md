@@ -34,18 +34,22 @@ device = torch.accelerator.current_accelerator()
 
 a = torch.tensor([1.0, 2.0, 3.0], dtype=torch.float32, device=device)
 b = torch.tensor([4.0, 5.0, 6.0], dtype=torch.float32, device=device)
-print(a + b)
+c = a + b
+print(c.cpu())  # Transfer to host memory for display
 ```
 
 ---
 
-## Example
+## Examples
 
-Inspects the accelerator, generates synthetic non-linear regression data on the Neuron device, and trains a 2-layer MLP using `torch.compile(backend="tpu")`, verifying that loss decreases and converges:
-
-```bash
-python examples/basic_ops.py
-```
+* **Basic Operations & Device Inspection** ([`examples/basic_ops.py`](examples/basic_ops.py)):
+  ```bash
+  python examples/basic_ops.py
+  ```
+* **MLP Regression Training with `torch.compile`** ([`examples/train_mlp.py`](examples/train_mlp.py)):
+  ```bash
+  python examples/train_mlp.py
+  ```
 
 ---
 
